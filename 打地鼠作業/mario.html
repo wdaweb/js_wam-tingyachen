@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>踩烏龜</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    .score-text {
+      position: absolute;
+      top: 30px;
+      font-weight: bold;
+      font-size: 30px;
+      display: inline-block;
+    }
+
+    .score-img {
+      width: 90px;
+      height: 90px;
+    }
+
+    #container {
+      position: relative;
+      width: 920px;
+      margin: 0 auto;
+    }
+
+    #game-box {
+      width: 100%;
+      height: 700px;
+      background-image: url(./img/bg.png);
+      background-repeat: no-repeat;
+      background-size: cover;
+      /* cursor: url(檔案路徑) 滑鼠x座標 滑鼠y座標, auto */
+      cursor: url(./img/mario.png), auto;
+    }
+
+    .game {
+      margin-left: 195px;
+      padding-top: 190px;
+    }
+
+    .hole {
+      padding-left: 10px;
+      text-align: center;
+      width: 140px;
+      height: 140px;
+      background-image: url(./img/pipe.png);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: 10px 88px;
+    }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 25px 3px;
+    }
+
+    img {
+      width: 80px;
+      height: 100px;
+    }
+
+    .score-box {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      right: -320px;
+      bottom: 50px;
+    }
+
+    .score-chart {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      right: -300px;
+      bottom: 100px;
+    }
+
+    .dialog {
+      width: 240px;
+      height: 185px;
+      margin-left: -21px;
+    }
+
+    .star {
+      margin-left: 73px;
+    }
+    /* --------按鈕---------*/
+    .wrapper {
+      position: relative;
+      display: block;
+      width: 150px;
+      height: 50px;
+      margin-top: 95px;
+      margin-left: 400px;
+      text-align: center;
+      line-height: 50px;
+      color: black;
+      background-color: transparent;
+      border: 1px solid black;
+      transition: all 0.3s linear;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .button {
+      position: relative;
+      z-index: 1;
+      font-family: Verdana, Tahoma, sans-serif;
+      font-size: 20px;
+    }
+
+    .wrapper::before {
+      content: "";
+      position: absolute;
+      display: block;
+      width: 0%;
+      height: 0%;
+      background: rgb(64, 67, 85);
+      transition: all 0.3s ease;
+    }
+
+    .wrapper:hover {
+      color: white;
+    }
+
+    .wrapper:hover::before {
+      width: 100%;
+      height: 100%;
+      opacity: 1;
+    }
+
+    
+  </style>
+</head>
+
+<body>
+
+  <div id="container">
+    <img src="./img/score.gif" class="score-img">
+    <p class="score-text">目前分數：<span id="score">0</span></p>
+
+
+    <div id="game-box">
+      <table class="game">
+        <tr>
+          <td class="hole" id="hole7"></td>
+          <td class="hole" id="hole8"></td>
+          <td class="hole" id="hole9"></td>
+        </tr>
+        <tr>
+          <td class="hole" id="hole4"></td>
+          <td class="hole" id="hole5"></td>
+          <td class="hole" id="hole6"></td>
+        </tr>
+        <tr>
+          <td class="hole" id="hole1"></td>
+          <td class="hole" id="hole2"></td>
+          <td class="hole" id="hole3"></td>
+        </tr>
+
+      </table>
+      <div class="wrapper">
+        <p class="button" id="start">Start!</p>
+      </div>
+
+      <div class="score-box">
+        <h3>Top score</h3>
+        <br>
+        玩家：<span id="highname">???</span>
+        分數：<span id="highscore">0</span>
+      </div>
+
+      <div class="score-chart">
+        <img src="./img/dialog.png" class="dialog">
+        <br>
+        <img src="./img/score2.gif" class="star">
+      </div>
+    </div>
+
+    <script>
+      const holes = document.getElementsByClassName('hole')
+      const start = document.getElementById('start')
+      const scoreText = document.getElementById('score')
+      const highnameText = document.getElementById('highname')
+      const highscoreText = document.getElementById('highscore')
+
+      // 最高分
+      const high = {
+        score: 0,
+        name: '???'
+      }
+      // 計分
+      let score = 0
+      // 計時器
+      let timer = 0
+      // 音效
+      const audio = new Audio()
+
+      // 讀取資料
+      const storage = JSON.parse(localStorage.getItem('dadishu'))
+      // 如果有資料
+      if (storage) {
+        high.name = storage.name
+        high.score = storage.score
+        // 修改最高分顯示文字
+        highnameText.innerText = high.name
+        highscoreText.innerText = high.score
+      }
+
+      start.onclick = () => {
+        // 停用開始按鈕
+        start.disabled = true
+        // 重設分數
+        score = 0
+        scoreText.innerText = score
+        // 每秒變換一次
+        timer = setInterval(game, 1000)
+        game()
+        // 十秒後遊戲結束
+        setTimeout(end, 10 * 1000)
+      }
+
+      // 每秒變換顏色
+      const game = () => {
+        // 移除顏色
+        for (const hole of holes) {
+          hole.innerHTML = ""
+        }
+        // 隨機抽三個變換成紅色，不考慮重複
+        for (let i = 0; i < 3; i++) {
+          holes[Math.round(Math.random() * (holes.length - 1))].innerHTML =
+            '<img src="./img/turtle.png" width="80" height="100">'
+        }
+      }
+
+
+      // 修改點擊圖
+      let tb = document.querySelector('table')
+
+      let tds = document.getElementsByTagName('td')
+      for (let i = 0; i < tds.length; i++) {
+        tds[i].onmousedown = function () {
+          tb.style.cursor = "url(./img/mario2.png), auto"
+          audio.src = './audio/maro-jump-sound.mp3'
+          audio.play()
+        }
+
+        tds[i].onmouseup = function () {
+          tb.style.cursor = "url(./img/mario.png), auto"
+        }
+      }
+
+      for (const hole of holes) {
+        hole.onclick = () => {
+          if (hole.innerHTML != "") {
+            // 變為藍色
+            hole.innerHTML = '<img src="./img/turtle-die.png" width="80" height="100">'
+            // 加分
+            score++
+            scoreText.innerHTML = score
+
+
+          }
+        }
+      }
+
+      // 遊戲結束
+      const end = () => {
+        // 停止變換顏色
+        clearInterval(timer)
+        // 把顏色清掉
+        for (const hole of holes) {
+          hole.innerHTML = ""
+        }
+
+        // 啟用開始按鈕
+        start.disabled = false
+        // 跳出訊息
+        alert(`遊戲結束，你得到 ${score} 分`)
+        // 紀錄最高分
+        if (score > high.score) {
+          audio.src = './audio/super-mario.mp3'
+          audio.play()
+          // 請玩家輸入名字
+          const input = prompt('最高分，請輸入名字')
+          // 修改最高分變數資料
+          high.score = score
+          high.name = input || '???'
+          // 修改最高分顯示文字
+          highnameText.innerText = high.name
+          highscoreText.innerText = high.score
+          // 保存
+          // localStorage.setItem(資料名, 文字)
+          // 變數轉文字：JSON.stringify(變數)
+          localStorage.setItem('dadishu', JSON.stringify(high))
+        }
+      }
+    </script>
+  </div>
+</body>
+
+</html>
